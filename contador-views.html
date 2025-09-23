@@ -390,7 +390,6 @@
     <!-- CONTADOR PARA EL PREVIEW -->
     <div class="container">
       <div class="viewer-counter">
-        <!-- NUEVA FILA: ICONOS A LA IZQUIERDA, TOTAL EN EL CENTRO, CIRCULO AL FINAL -->
         <div class="total-display" id="total-row">
           <div class="icons-group" aria-hidden="true">
             <div class="platform-icon twitch-icon" title="Twitch">
@@ -660,7 +659,6 @@
           }
         });
 
-        // BroadcastChannel (más directo y fiable dentro del mismo origen)
         try {
           bc = new BroadcastChannel("obs-viewer-counter");
           bc.onmessage = (ev) => {
@@ -723,7 +721,7 @@
         }
       }
 
-      // Obtener viewers de Kick (simulado / múltiple intento)
+      // Obtener viewers de Kick
       async function getKickViewers() {
         if (!config.kickChannel) {
           console.log("Canal de Kick no configurado");
@@ -867,11 +865,6 @@
           lastUpdate.textContent = now.toLocaleTimeString("es-ES");
         }
 
-        // Determinar estado total de forma robusta:
-        // 1) Si alguna plataforma está en "loading" -> total = loading
-        // 2) Else si viewers.total > 0 -> total = online
-        // 3) Else si alguna plataforma tiene "error" -> total = error
-        // 4) Else -> offline
         const twitchEl = document.getElementById("twitch-status");
         const kickEl = document.getElementById("kick-status");
 
