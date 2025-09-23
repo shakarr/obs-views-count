@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contador de Viewers - Kick y Twitch (Total)</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      body.counter-mode {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      body.counter-mode .config-dock {
+        display: none !important;
+      }
+
+      body.counter-mode .container {
+        display: block !important;
+      }
+
+      body.config-mode {
+        background: #1e1e1e;
+        padding: 0;
+      }
+
+      body.config-mode .container {
+        display: none !important;
+      }
+
+      body.config-mode .config-dock {
+        display: block !important;
+      }
+
+      .container {
+        background: black;
+        border-radius: 5px;
+        animation: fadeIn 0.5s ease-in;
+        display: none;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .viewer-counter {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+
+      #twitch-row,
+      #kick-row {
+        display: none;
+      }
+
+      .total-display {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(255, 255, 255, 0.12);
+        padding: 4px;
+        border-radius: 5px;
+        backdrop-filter: blur(8px);
+      }
+
+      .icons-group {
+        display: flex;
+        align-items: center;
+      }
+
+      .platform-icon {
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+      }
+
+      .twitch-icon {
+        color: #9146ff;
+        border-radius: 6px;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .kick-icon {
+        color: #53fc18;
+        background: black;
+        border-radius: 6px;
+        padding: 4px;
+        font-weight: bold;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .total-value {
+        color: white;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .spacer {
+        flex: 1;
+      }
+
+      .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #00ff00;
+        animation: pulse 2s infinite;
+        margin-right: 4px;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(0, 255, 0, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
+        }
+      }
+
+      .error {
+        background: #ff4444 !important;
+        animation: none;
+      }
+
+      .loading {
+        background: #ffaa00 !important;
+        animation: blink 1s infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .config-dock {
+        display: none;
+        width: 100%;
+        height: 100vh;
+        background: #2b2b2b;
+        color: #e0e0e0;
+        font-size: 13px;
+        overflow-y: auto;
+        font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      .dock-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 15px;
+        text-align: center;
+        border-bottom: 2px solid #1e1e1e;
+      }
+
+      .dock-header h2 {
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        margin: 0;
+      }
+
+      .dock-content {
+        padding: 15px;
+      }
+
+      .config-section {
+        background: #1e1e1e;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #3a3a3a;
+      }
+
+      .config-section h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .config-group {
+        margin-bottom: 12px;
+      }
+
+      .config-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #b0b0b0;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .config-group input {
+        width: 100%;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #3a3a3a;
+        background: #262626;
+        color: white;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+
+      .config-group input:focus {
+        outline: none;
+        border-color: #667eea;
+        background: #2a2a2a;
+      }
+
+      .config-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+      }
+
+      .config-buttons button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-secondary {
+        background: #3a3a3a;
+        color: #b0b0b0;
+      }
+
+      .btn-secondary:hover {
+        background: #4a4a4a;
+        color: white;
+      }
+
+      .status-panel {
+        background: #1e1e1e;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+        border: 1px solid #3a3a3a;
+      }
+
+      .status-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #2a2a2a;
+      }
+
+      .status-item:last-child {
+        border-bottom: none;
+      }
+
+      .status-label {
+        color: #b0b0b0;
+        font-size: 12px;
+      }
+
+      .status-value {
+        font-weight: 600;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .help-text {
+        color: #808080;
+        font-size: 11px;
+        margin-top: 5px;
+        line-height: 1.4;
+      }
+
+      .preview-section {
+        background: #1e1e1e;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        margin-top: 15px;
+        border: 1px solid #3a3a3a;
+      }
+
+      .mini-counter {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        padding: 10px;
+        margin: 10px auto;
+        max-width: 200px;
+      }
+
+      .mini-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        margin-bottom: 4px;
+        font-size: 11px;
+        color: white;
+      }
+
+      .mini-row:last-child {
+        margin-bottom: 0;
+        background: rgba(255, 255, 255, 0.2);
+        font-weight: bold;
+      }
+
+      .viewer-count.updated {
+        animation: numberPop 0.5s ease;
+      }
+
+      @keyframes numberPop {
+        50% {
+          transform: scale(1.2);
+        }
+      }
+
+      .mode-indicator {
+        background: #262626;
+        border-radius: 4px;
+        padding: 8px;
+        text-align: center;
+        margin-bottom: 15px;
+        font-size: 11px;
+        color: #808080;
+      }
+
+      .mode-indicator.active {
+        background: linear-gradient(
+          135deg,
+          rgba(102, 126, 234, 0.2),
+          rgba(118, 75, 162, 0.2)
+        );
+        color: #a0a0ff;
+        border: 1px solid #667eea;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- CONTADOR PARA EL PREVIEW -->
+    <div class="container">
+      <div class="viewer-counter">
+        <!-- NUEVA FILA: ICONOS A LA IZQUIERDA, TOTAL EN EL CENTRO, CIRCULO AL FINAL -->
+        <div class="total-display" id="total-row">
+          <div class="icons-group" aria-hidden="true">
+            <div class="platform-icon twitch-icon" title="Twitch">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"
+                />
+              </svg>
+            </div>
+            <div class="platform-icon kick-icon" title="Kick">K</div>
+          </div>
+
+          <div>
+            <div class="total-value" id="total-count">6598</div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div class="status-indicator" id="total-status"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL DE CONFIGURACIÓN TIPO DOCK -->
+    <div class="config-dock">
+      <div class="dock-header">
+        <h2>Configuración del Contador</h2>
+      </div>
+
+      <div class="dock-content">
+        <div class="mode-indicator" id="mode-indicator">
+          Modo: <span id="current-mode">Configuración</span>
+        </div>
+
+        <!-- CONFIGURACIÓN DE CANALES -->
+        <div class="config-section">
+          <h3>Configuración de Canales</h3>
+
+          <div class="config-group">
+            <label>Canal de Twitch:</label>
+            <input
+              type="text"
+              id="twitch-channel"
+              placeholder="nombre_canal_twitch"
+            />
+            <div class="help-text">Solo el nombre de usuario, sin @</div>
+          </div>
+
+          <div class="config-group">
+            <label>Canal de Kick:</label>
+            <input
+              type="text"
+              id="kick-channel"
+              placeholder="nombre_canal_kick"
+            />
+            <div class="help-text">Solo el nombre de usuario, sin @</div>
+          </div>
+        </div>
+
+        <!-- CONFIG DE LA API -->
+        <div class="config-section">
+          <h3>Credenciales de API</h3>
+
+          <div class="config-group">
+            <label>Client ID de Twitch:</label>
+            <input
+              type="text"
+              id="twitch-client-id"
+              placeholder="tu_client_id"
+            />
+            <div class="help-text">Obtener en: dev.twitch.tv/console</div>
+          </div>
+
+          <div class="config-group">
+            <label>Access Token de Twitch:</label>
+            <input
+              type="password"
+              id="twitch-token"
+              placeholder="tu_access_token"
+            />
+            <div class="help-text">Generar en: twitchtokengenerator.com</div>
+          </div>
+        </div>
+
+        <!-- BOTONES DE ACCIONES -->
+        <div class="config-buttons">
+          <button class="btn-primary" onclick="saveConfig()">Guardar</button>
+          <button class="btn-secondary" onclick="testConnection()">
+            Probar
+          </button>
+        </div>
+
+        <!-- ESTADO ACTUAL -->
+        <div class="status-panel">
+          <h3 style="color: white; font-size: 14px; margin-bottom: 12px">
+            Estado Actual
+          </h3>
+          <div class="status-item">
+            <span class="status-label">Twitch:</span>
+            <span class="status-value" id="dock-twitch-status">
+              <span id="dock-twitch-count">0</span> viewers
+              <span class="status-indicator" id="dock-twitch-indicator"></span>
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Kick:</span>
+            <span class="status-value" id="dock-kick-status">
+              <span id="dock-kick-count">0</span> viewers
+              <span class="status-indicator" id="dock-kick-indicator"></span>
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Total:</span>
+            <span
+              class="status-value"
+              id="dock-total-status"
+              style="color: #ffd700"
+            >
+              <span id="dock-total-count">0</span> viewers
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Última actualización:</span>
+            <span class="status-value" id="last-update">Nunca</span>
+          </div>
+        </div>
+
+        <!-- PREVIEW -->
+        <div class="preview-section">
+          <h3 style="color: white; font-size: 14px; margin-bottom: 8px">
+            Vista Previa
+          </h3>
+          <div class="mini-counter">
+            <div class="mini-row">
+              <span>Twitch</span>
+              <span id="mini-twitch">0</span>
+            </div>
+            <div class="mini-row">
+              <span>Kick</span>
+              <span id="mini-kick">0</span>
+            </div>
+            <div class="mini-row">
+              <span>TOTAL</span>
+              <span id="mini-total">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAS INFO -->
+        <div class="config-section" style="margin-top: 15px">
+          <h3>Información</h3>
+          <div class="help-text">
+            • Actualización automática cada 30 segundos<br />
+            • Añade ?mode=counter a la URL para mostrar solo el contador<br />
+            • Añade ?mode=config para mostrar este panel<br />
+            • Los datos se guardan localmente en el navegador
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const mode = urlParams.get("mode") || "counter";
+
+      // Establecer modo
+      if (mode === "config") {
+        document.body.className = "config-mode";
+      } else {
+        document.body.className = "counter-mode";
+      }
+
+      // Configuración
+      let config = {
+        twitchChannel: "",
+        kickChannel: "",
+        twitchClientId: "",
+        twitchToken: "",
+        updateInterval: 10000, // 10 segundos
+      };
+
+      // Variables para almacenar los contadores
+      let viewers = {
+        twitch: 0,
+        kick: 0,
+        total: 0,
+      };
+
+      // Cargar configuración
+      function loadConfig() {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Cargar desde localStorage
+        config.twitchChannel = localStorage.getItem("twitchChannel") || "";
+        config.kickChannel = localStorage.getItem("kickChannel") || "";
+        config.twitchClientId = localStorage.getItem("twitchClientId") || "";
+        config.twitchToken = localStorage.getItem("twitchToken") || "";
+
+        // Sobrescribir con parámetros de URL si existen
+        if (urlParams.get("twitch"))
+          config.twitchChannel = urlParams.get("twitch");
+        if (urlParams.get("kick")) config.kickChannel = urlParams.get("kick");
+        if (urlParams.get("clientid"))
+          config.twitchClientId = urlParams.get("clientid");
+        if (urlParams.get("token")) config.twitchToken = urlParams.get("token");
+
+        // Actualizar campos del formulario
+        if (document.getElementById("twitch-channel")) {
+          document.getElementById("twitch-channel").value =
+            config.twitchChannel;
+          document.getElementById("kick-channel").value = config.kickChannel;
+          document.getElementById("twitch-client-id").value =
+            config.twitchClientId;
+          document.getElementById("twitch-token").value = config.twitchToken;
+        }
+      }
+
+      let bc;
+
+      // Guardar configuración
+      function saveConfig() {
+        config.twitchChannel = document.getElementById("twitch-channel").value;
+        config.kickChannel = document.getElementById("kick-channel").value;
+        config.twitchClientId =
+          document.getElementById("twitch-client-id").value;
+        config.twitchToken = document.getElementById("twitch-token").value;
+
+        // Guardar en localStorage
+        localStorage.setItem("twitchChannel", config.twitchChannel);
+        localStorage.setItem("kickChannel", config.kickChannel);
+        localStorage.setItem("twitchClientId", config.twitchClientId);
+        localStorage.setItem("twitchToken", config.twitchToken);
+
+        // Notificar a otras ventanas/instancias
+        try {
+          if (bc) bc.postMessage({ type: "config-updated" });
+        } catch (e) {
+          console.warn("BroadcastChannel no disponible:", e);
+        }
+
+        // Mostrar notificación
+        alert("Configuración guardada correctamente");
+
+        // Reiniciar actualización en esta instancia
+        startUpdating();
+      }
+
+      function setupInterInstanceSync() {
+        // Listener de storage (se dispara en otras ventanas cuando cambian las claves)
+        window.addEventListener("storage", (e) => {
+          // Filtra sólo las claves relevantes para evitar recargas innecesarias
+          const keys = [
+            "twitchChannel",
+            "kickChannel",
+            "twitchClientId",
+            "twitchToken",
+          ];
+          if (keys.includes(e.key)) {
+            console.log("storage event recibido:", e.key, e.newValue);
+            loadConfig(); // recarga config desde localStorage
+            startUpdating(); // reinicia el loop de updates con la nueva config
+          }
+        });
+
+        // BroadcastChannel (más directo y fiable dentro del mismo origen)
+        try {
+          bc = new BroadcastChannel("obs-viewer-counter");
+          bc.onmessage = (ev) => {
+            if (ev.data && ev.data.type === "config-updated") {
+              console.log("BroadcastChannel: config-updated recibido");
+              loadConfig();
+              startUpdating();
+            }
+          };
+        } catch (err) {
+          console.warn("BroadcastChannel no soportado en este entorno:", err);
+          bc = null;
+        }
+      }
+
+      // Probar conexión
+      function testConnection() {
+        updateViewers();
+      }
+
+      // Obtener viewers de Twitch
+      async function getTwitchViewers() {
+        if (
+          !config.twitchChannel ||
+          !config.twitchClientId ||
+          !config.twitchToken
+        ) {
+          console.log("Configuración de Twitch incompleta");
+          return 0;
+        }
+
+        updateIndicator("twitch", "loading");
+
+        try {
+          const response = await fetch(
+            `https://api.twitch.tv/helix/streams?user_login=${config.twitchChannel}`,
+            {
+              headers: {
+                "Client-ID": config.twitchClientId,
+                Authorization: `Bearer ${config.twitchToken}`,
+              },
+            }
+          );
+
+          if (!response.ok) throw new Error("Error en la API de Twitch");
+
+          const data = await response.json();
+
+          if (data.data && data.data.length > 0) {
+            updateIndicator("twitch", "online");
+            return data.data[0].viewer_count;
+          } else {
+            updateIndicator("twitch", "offline");
+            return 0;
+          }
+        } catch (error) {
+          console.error("Error obteniendo viewers de Twitch:", error);
+          updateIndicator("twitch", "error");
+          return 0;
+        }
+      }
+
+      // Obtener viewers de Kick (simulado / múltiple intento)
+      async function getKickViewers() {
+        if (!config.kickChannel) {
+          console.log("Canal de Kick no configurado");
+          return 0;
+        }
+
+        updateIndicator("kick", "loading");
+
+        const slug = encodeURIComponent(config.kickChannel);
+        const endpoints = [
+          `https://api.kick.com/private/v1/channels/${slug}`,
+          `https://api.kick.com/private/v0/channels/${slug}/viewer-count`,
+          `https://kick.com/api/v2/channels/${slug}`,
+          `https://kick.com/api/v1/channels/${slug}`,
+        ];
+
+        for (const url of endpoints) {
+          try {
+            const resp = await fetch(url, {
+              method: "GET",
+              redirect: "follow",
+            });
+
+            if (!resp.ok) {
+              console.warn(`Kick: endpoint ${url} respondió ${resp.status}`);
+              continue;
+            }
+
+            const data = await resp.json();
+            console.log("Kick: respuesta desde", url, data);
+
+            const possible =
+              (data?.livestream &&
+                (data.livestream.viewer_count || data.livestream.viewers)) ||
+              data?.streamer_channel?.viewer_count ||
+              data?.streamer_channel?.viewers_count ||
+              data?.viewer_count ||
+              data?.viewers ||
+              data?.data?.[0]?.viewer_count ||
+              data?.data?.[0]?.viewers ||
+              (data?.livestream?.viewer_count ?? null) ||
+              (data?.stream?.viewer_count ?? null);
+
+            if (possible != null && !Number.isNaN(Number(possible))) {
+              updateIndicator("kick", "online");
+              return Number(possible);
+            } else {
+              console.warn(
+                "Kick: no se encontró viewer_count en respuesta del endpoint",
+                url
+              );
+              continue;
+            }
+          } catch (err) {
+            console.error("Error fetch Kick desde", url, err);
+
+            const isCorsLike =
+              err?.message &&
+              (err.message.includes("Failed to fetch") ||
+                err.message.includes("NetworkError") ||
+                err.message.includes("CORS") ||
+                err.message.includes("Origin"));
+
+            if (isCorsLike) {
+              updateIndicator("kick", "error");
+              console.warn(
+                "Posible bloqueo CORS al pedir Kick desde la fuente de navegador. " +
+                  "Consulta las soluciones (proxy / serverless) en la documentación."
+              );
+              return 0;
+            }
+
+            continue;
+          }
+        }
+
+        updateIndicator("kick", "offline");
+        return 0;
+      }
+
+      // Actualizar indicadores de estado
+      function updateIndicator(platform, status) {
+        const indicators = {
+          twitch: ["twitch-status", "dock-twitch-indicator"],
+          kick: ["kick-status", "dock-kick-indicator"],
+          total: ["total-status"],
+        };
+
+        const classes = {
+          loading: "status-indicator loading",
+          online: "status-indicator",
+          offline: "status-indicator error",
+          error: "status-indicator error",
+        };
+
+        const ids = indicators[platform] || [];
+        ids.forEach((id) => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.className = classes[status] || classes.offline;
+          }
+        });
+      }
+
+      // Actualizar contador con animación
+      function updateCounter(elementId, newValue) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        const currentValue = parseInt(element.textContent || "0", 10);
+
+        if (currentValue !== newValue) {
+          element.textContent = newValue;
+          if (element.parentElement) {
+            element.parentElement.classList.add("updated");
+            setTimeout(() => {
+              element.parentElement.classList.remove("updated");
+            }, 500);
+          }
+        }
+      }
+
+      // Actualizar todos los elementos
+      function updateAllElements() {
+        // Actualizamos valores visibles
+        updateCounter("total-count", viewers.total);
+        updateCounter("dock-total-count", viewers.total);
+        updateCounter("mini-total", viewers.total);
+
+        updateCounter("twitch-count", viewers.twitch);
+        updateCounter("kick-count", viewers.kick);
+        updateCounter("dock-twitch-count", viewers.twitch);
+        updateCounter("dock-kick-count", viewers.kick);
+        updateCounter("mini-twitch", viewers.twitch);
+        updateCounter("mini-kick", viewers.kick);
+
+        // Última actualización
+        const lastUpdate = document.getElementById("last-update");
+        if (lastUpdate) {
+          const now = new Date();
+          lastUpdate.textContent = now.toLocaleTimeString("es-ES");
+        }
+
+        // Determinar estado total de forma robusta:
+        // 1) Si alguna plataforma está en "loading" -> total = loading
+        // 2) Else si viewers.total > 0 -> total = online
+        // 3) Else si alguna plataforma tiene "error" -> total = error
+        // 4) Else -> offline
+        const twitchEl = document.getElementById("twitch-status");
+        const kickEl = document.getElementById("kick-status");
+
+        const isTwitchLoading =
+          twitchEl && twitchEl.className.includes("loading");
+        const isKickLoading = kickEl && kickEl.className.includes("loading");
+        const isAnyLoading = isTwitchLoading || isKickLoading;
+
+        const isTwitchError = twitchEl && twitchEl.className.includes("error");
+        const isKickError = kickEl && kickEl.className.includes("error");
+        const isAnyError = isTwitchError || isKickError;
+
+        if (isAnyLoading) {
+          updateIndicator("total", "loading");
+        } else if ((viewers.total || 0) > 0) {
+          updateIndicator("total", "online");
+        } else if (isAnyError) {
+          updateIndicator("total", "error");
+        } else {
+          updateIndicator("total", "offline");
+        }
+      }
+
+      // Actualizar todos los viewers
+      async function updateViewers() {
+        console.log("Actualizando contadores...");
+
+        const [twitchViewers, kickViewers] = await Promise.all([
+          getTwitchViewers(),
+          getKickViewers(),
+        ]);
+
+        viewers.twitch = twitchViewers || 0;
+        viewers.kick = kickViewers || 0;
+        viewers.total = viewers.twitch + viewers.kick;
+
+        updateAllElements();
+
+        console.log(
+          `Viewers - Twitch: ${viewers.twitch}, Kick: ${viewers.kick}, Total: ${viewers.total}`
+        );
+      }
+
+      // Iniciar actualización periódica
+      let updateIntervalId;
+      function startUpdating() {
+        if (updateIntervalId) {
+          clearInterval(updateIntervalId);
+        }
+
+        updateViewers();
+        updateIntervalId = setInterval(updateViewers, config.updateInterval);
+      }
+
+      // Inicialización
+      document.addEventListener("DOMContentLoaded", () => {
+        loadConfig();
+        setupInterInstanceSync();
+
+        // Actualizar indicador de modo
+        const modeIndicator = document.getElementById("current-mode");
+        if (modeIndicator) {
+          modeIndicator.textContent =
+            mode === "config" ? "Configuración" : "Contador";
+          if (mode === "config") {
+            document.getElementById("mode-indicator").classList.add("active");
+          }
+        }
+
+        if (config.twitchChannel || config.kickChannel) {
+          startUpdating();
+        }
+      });
+    </script>
+  </body>
+</html>
