@@ -2,6 +2,8 @@
 
 ## Obtención valores API
 
+**NOTA:** La generación de este token no se debe mostrar, este token es privado, no mostrar bajo ningún concepto, máximo cuidado
+
 Lo primero que tenemos que hacer es ir a [twitchtokengenerator](https://twitchtokengenerator.com) y elegir **Custom Scope Token**
 
 ![img1](./imgs//img-1.png)
